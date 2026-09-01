@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wasock"
+version = "0.5.1b0"
+description = "WAsock (WhatsApp Socket) - a Python wrapper around Baileys for building WhatsApp bots"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+
+authors = [
+    { name = "Ahmed Mohmmed-AM" }
+]
+
+keywords = [
+    "whatsapp",
+    "baileys",
+    "bot",
+    "chat",
+    "automation",
+    "whatsapp-socket"
+]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "qrcode",
+    "pillow"
+]
+
+[project.urls]
+Homepage = "https://github.com/AhmedMohmmed-AM/WAsock"
+Repository = "https://github.com/AhmedMohmmed-AM/WAsock"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+wasock = ["node/**/*"]
