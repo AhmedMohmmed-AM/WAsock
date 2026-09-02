@@ -144,7 +144,7 @@ If you need help, have a question, or encounter an issue, you can contact:
 
 ## License
 
-MIT License — see the [LICENSE](https://chatgpt.com/c/LICENSE) file for details.
+MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
 
