@@ -1,16 +1,6 @@
 import subprocess, atexit, socket, queue, threading, json, time, os
 from concurrent.futures import ThreadPoolExecutor
 
-def connectToServer(self):
-    for _ in range(50):
-        try:
-            self.sock.connect(("127.0.0.1", 5000))
-            return
-        except ConnectionRefusedError:
-            time.sleep(0.1)
-
-    raise ConnectionError("Could not connect to Node.js server")
-
 _SERVER_JS_PATH = os.path.join(os.path.dirname(__file__), "node", "server.js")
 
 class NodeJS:
@@ -22,7 +12,7 @@ class NodeJS:
         atexit.register(self.end)
 
         self.sock = socket.socket()
-        connectToServer(self)
+        self.connectToServer()
 
         self.responses = queue.Queue()
 
@@ -35,6 +25,23 @@ class NodeJS:
             daemon=True
         )
         self.threading.start()
+
+    def connectToServer(self):
+        for _ in range(50):
+            try:
+                self.sock.connect(("127.0.0.1", 5000))
+                return
+            except ConnectionRefusedError:
+                time.sleep(0.1)
+
+        raise ConnectionError("Could not connect to Node.js server")
+
+    def runCallBack(self, callback, message):
+        try:
+            callback(message)
+        except Exception:
+            import traceback
+            traceback.print_exc()
 
     def receive(self):
         buffer = ""
@@ -60,7 +67,7 @@ class NodeJS:
                     callback = self.events.get(event)
 
                     if callback:
-                        self.executor.submit(callback, message)
+                        self.executor.submit(self.runCallBack, callback, message)
                 else:
                     self.responses.put(message)
 

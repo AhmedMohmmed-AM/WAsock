@@ -7,8 +7,11 @@ const {
 } = require("@whiskeysockets/baileys");
 const qrcode = require("qrcode-terminal");
 const QRcode = require("qrcode");
+const fs = require("fs");
+const path = require("path");
 const net = require("net");
-const { count } = require("console");
+
+const { isAuthValid } = require("./isauthvalid");
 
 var loggerLevel = "silent";
 var authName = "auth";
@@ -20,6 +23,11 @@ function send(socket, message) {
 }
 
 async function startBaileys(logger, authName, socket) {
+    const authPath = path.resolve(authName);
+    if (fs.existsSync(authPath) && !isAuthValid(authPath)) {
+        fs.rmSync(authPath, { recursive: true, force: true });
+    }
+
     const { state, saveCreds } = await useMultiFileAuthState(authName);
     const { version } = await fetchLatestBaileysVersion();
 
@@ -184,12 +192,11 @@ const server = net.createServer((socket) => {
                     if (globalSocket.authState.creds.registered) {
                         throw new Error("Already registered, no need for pairing code");
                     }
-                    let code;
-                    if (message.customPairingCode) {
-                        code = await globalSocket.requestPairingCode(message.phoneNumber, message.customPairingCode);
-                    } else {
-                        code = await globalSocket.requestPairingCode(message.phoneNumber);
-                    }
+                    
+                    const code = message.customPairingCode
+                        ? await globalSocket.requestPairingCode(message.phoneNumber, message.customPairingCode)
+                        : await globalSocket.requestPairingCode(message.phoneNumber);
+                    
                     send(socket, { type: "response", success: true, message: "", code });
                 } catch (err) {
                     console.error("requestParinigCode error:", err);

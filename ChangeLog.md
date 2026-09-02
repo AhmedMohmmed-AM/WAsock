@@ -1,8 +1,12 @@
 ## Changelog
 
-### 0.5.1b1
+### 0.5.1
 
 - Fixed a random pairing code issue in `requestPairingCode`
+- Automatically Installing Node.js Modules
+- Added checker that checks if customPairingCode has an unallowed letters
+- Automatically delete the auth folder if no login information is found
+- Fixed Python exceptions not being displayed in the terminal
 
 ### 0.5.1b0
 
