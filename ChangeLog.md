@@ -1,5 +1,20 @@
 ## Changelog
 
+### 0.5.2
+
+* Added `syncFullHistory` support to `WhatsAppSocket`
+* Fixed invalid pairing codes caused by default platform values in `requestPairingCode` and `WhatsAppSocket`
+* Added a checker to ensure `syncFullHistory` is a boolean
+* Removed the need for `try/finally` ; simple use `bot.start()`
+* Replaced `getKey()` in `Message` with `Message.key`
+* Added `Message.quotedKey`
+* Added `Message.quotedFromMe`
+* Replaced `Message.fromBot` with `Message.fromMe`
+* Improved `Message.delete(messageKey)` to support deleting any message using its key
+* Fixed deleting auth file after login
+* Added `Browser` class
+* Added `ubuntu`, `macOS`, and `windows` to `Browser` class
+
 ### 0.5.1
 
 - Fixed a random pairing code issue in `requestPairingCode`

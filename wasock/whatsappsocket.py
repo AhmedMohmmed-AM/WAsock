@@ -1,16 +1,25 @@
-import os, string
+import atexit, string
 from .nodejs import NodeJS
+from .browser import Browser
 
 class WhatsAppSocket:
-    def __init__(self, authName="auth", loggerLevel="silent"):
+    def __init__(self, authName="auth", loggerLevel="silent", syncFullHistory=False, browserInfo: "Browser"=Browser.ubuntu("Chrome", "1.14.4")):
         if not loggerLevel.lower() in ["debug", "error", "fatal", "info", "silent", "trace", "warn"]:
             raise SyntaxError(f"Unknown logger type {loggerLevel}")
         if not isinstance(authName, str):
             raise TypeError("authName must be string")
+        if not isinstance(syncFullHistory, bool):
+            raise TypeError("syncFullHistory must be boolean")
 
         self.nodeJS = NodeJS()
 
-        response = self.nodeJS.send({"action": "setup", "loggerLevel": loggerLevel.lower(), "authName": authName})
+        response = self.nodeJS.send({
+            "action": "setup", 
+            "loggerLevel": loggerLevel.lower(), 
+            "authName": authName,
+            "browserInfo": browserInfo,
+            "syncFullHistory": syncFullHistory
+        })
 
         if not response["success"]:
             raise RuntimeError(response.get("message", "Setup failed"))
@@ -40,7 +49,15 @@ class WhatsAppSocket:
         return response["code"]
 
     def start(self):
-        return self.nodeJS.send({"action": "start"})
+        #return self.nodeJS.send({"action": "start"})
+        try:
+            self.nodeJS.send({"action": "start"})
+            input()
+        except KeyboardInterrupt:
+            print("\nExiting the program...")
+            self.end()
+        finally:
+            self.end()
 
     def on(self, event, callback):
         self.nodeJS.on(event, callback)

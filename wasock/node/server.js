@@ -3,18 +3,23 @@ const {
     makeWASocket,
     fetchLatestBaileysVersion,
     useMultiFileAuthState,
-    DisconnectReason
+    DisconnectReason,
+    Browsers
 } = require("@whiskeysockets/baileys");
+const { WhatsAppCaller } = require("")
 const qrcode = require("qrcode-terminal");
 const QRcode = require("qrcode");
 const fs = require("fs");
 const path = require("path");
 const net = require("net");
 
-const { isAuthValid } = require("./isauthvalid");
+const { isAuthValid } = require("./assets/isauthvalid");
+const { resolveBrowser } = require("./assets/resolvebrowser");
 
 var loggerLevel = "silent";
 var authName = "auth";
+var browserInfo = ["ubuntu", "Chrome", "14.4.1"];
+var syncFullHistory = false;
 
 var globalSocket;
 
@@ -22,19 +27,21 @@ function send(socket, message) {
     socket.write(JSON.stringify(message) + "\n");
 }
 
-async function startBaileys(logger, authName, socket) {
-    const authPath = path.resolve(authName);
-    if (fs.existsSync(authPath) && !isAuthValid(authPath)) {
-        fs.rmSync(authPath, { recursive: true, force: true });
-    }
+const authPath = path.resolve(authName);
+if (fs.existsSync(authPath) && !isAuthValid(authPath)) {
+    fs.rmSync(authPath, { recursive: true, force: true });
+}
 
+async function startBaileys(logger, authName, browserInfo, socket) {
     const { state, saveCreds } = await useMultiFileAuthState(authName);
     const { version } = await fetchLatestBaileysVersion();
 
     const sock = makeWASocket({
         auth: state,
         logger,
-        version
+        version,
+        browser: resolveBrowser(browserInfo, Browsers),
+        syncFullHistory,
     });
     globalSocket = sock;
 
@@ -72,7 +79,7 @@ async function startBaileys(logger, authName, socket) {
                 });
 
                 if (shouldReconnect !== DisconnectReason.loggedOut) {
-                    await startBaileys(logger, authName, socket);
+                    await startBaileys(logger, authName, browserInfo, socket);
                 }
 
                 break;
@@ -115,17 +122,17 @@ const server = net.createServer((socket) => {
             if (message.action === "setup") {
                 loggerLevel = message.loggerLevel;
                 authName = message.authName;
+                syncFullHistory = message.syncFullHistory;
+                browserInfo = message.browserInfo;
                 send(socket, { type: "response", success: true, message: "" });
             }
 
             if (message.action === "start") {
-                await startBaileys(pino({ level: loggerLevel }), authName, socket);
+                await startBaileys(pino({ level: loggerLevel }), authName, browserInfo, socket);
                 send(socket, { type: "response", success: true, message: "" });
             }
 
             if (message.action === "replyMessage") {
-                console.log("REPLY - chat:", message.chat);
-                console.log("REPLY - quoted.key:", message.quoted?.key);
                 try {
                     if (!globalSocket) throw new Error("Not connected");
                     if (!message.chat) throw new Error("chat is required");
@@ -196,7 +203,7 @@ const server = net.createServer((socket) => {
                     const code = message.customPairingCode
                         ? await globalSocket.requestPairingCode(message.phoneNumber, message.customPairingCode)
                         : await globalSocket.requestPairingCode(message.phoneNumber);
-                    
+
                     send(socket, { type: "response", success: true, message: "", code });
                 } catch (err) {
                     console.error("requestParinigCode error:", err);

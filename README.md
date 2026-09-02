@@ -2,27 +2,40 @@
 
 ![WAsock Logo](assets/logo.png)
 
-**wasock** (WhatsApp Socket) is a lightweight Python library for interacting with WhatsApp, built on top of [Baileys](https://github.com/WhiskeySockets/Baileys) via a Node.js subprocess that communicates with Python over a TCP socket.
+**WAsock** (WhatsApp Socket) is a lightweight Python library for interacting with WhatsApp, built on top of [Baileys](https://github.com/WhiskeySockets/Baileys) via a Node.js subprocess that communicates with Python over a TCP socket.
 
 Made by an Egyptian developer 🇪🇬 — Ahmed Mohmmed-AM.
 
-> **Status:**`0.5.1` — still under development, the API may change before a stable release.
+> **Status:**`0.5.2` — still under development. The API may change before a stable release.
 
 ---
 
 ## Overview
 
-wasock gives you a simple Python interface for WhatsApp: receiving messages, replying to them, sending new messages, deleting messages, and displaying a QR code or pairing code for login — without writing a single line of JavaScript.
+WAsock provides a simple Python interface for interacting with WhatsApp without writing JavaScript.
 
-wasock is a lightweight Python wrapper around [Baileys](https://github.com/WhiskeySockets/Baileys). It spawns a Node.js subprocess and talks to it over a local TCP socket, so you can send, receive, reply to, and delete WhatsApp messages entirely from Python.
+It supports:
+
+* Receiving messages
+* Sending messages
+* Replying to messages
+* Deleting messages
+* Quoted/replied message information
+* QR code login
+* Pairing code login
+* Connection status handling
+* Custom browser information
+* Full history synchronization
+
+WAsock is built on top of [Baileys](https://github.com/WhiskeySockets/Baileys). It runs Baileys in a Node.js subprocess and communicates with it through a local TCP socket, allowing WhatsApp functionality to be controlled entirely from Python.
 
 ---
 
 ## Requirements
 
 * Python >= 3.8
-* Node.js (>= 18 recommended)
-* An internet connection to install the initial npm dependencies
+* Node.js >= 18 recommended
+* An internet connection to install the required npm dependencies
 
 ---
 
@@ -37,17 +50,29 @@ pip install wasock
 ## Quick Start
 
 ```python
-from wasock import WhatsAppSocket, Message, QRCode, Connection
+from wasock import WhatsAppSocket, Message, QRCode, Connection, Browser
 
-bot = WhatsAppSocket(authName="auth", loggerLevel="silent")
+bot = WhatsAppSocket(
+    authName="auth",
+    loggerLevel="silent",
+    browserInfo=Browser.ubuntu("Chrome"),
+    syncFullHistory=False
+)
 
 def onLogin(data):
-    qr = QRCode(data["qr"], bot.nodeJS, small=True, type="img", imgWidth=500)
+    qr = QRCode(
+        data["qr"],
+        bot.nodeJS,
+        small=True,
+        type="img",
+        imgWidth=500
+    )
     qr.render("qr.png")
     print("Scan qr.png with WhatsApp on your phone")
 
 def onConnection(data):
     conn = Connection(data)
+
     if conn.connected:
         print("Connection opened!")
     else:
@@ -55,7 +80,8 @@ def onConnection(data):
 
 def onMessage(data):
     message = Message(data, bot.nodeJS)
-    if message.fromBot:
+
+    if message.fromMe:
         return
 
     if message.text == "!ping":
@@ -66,71 +92,184 @@ bot.on("connection", onConnection)
 bot.on("message", onMessage)
 
 bot.start()
-
-try:
-    input("Bot is running, press Enter to exit...\n")
-finally:
-    bot.end()
 ```
 
 ---
 
-## API
+# API
 
-### `WhatsAppSocket(authName="auth", loggerLevel="silent")`
+## `WhatsAppSocket`
 
-Starts the connection to the Node server and sets up the session.
+```python
+WhatsAppSocket(
+    authName="auth",
+    loggerLevel="silent",
+    browserInfo=Browser.ubuntu("Chrome"),
+    syncFullHistory=False
+)
+```
 
-* `.start()` — starts the actual connection to WhatsApp.
-* `.on(event, callback)` — registers an event listener (`"login"`, `"connection"`, `"message"`).
-* `.requestPairingCode(phoneNumber, customPairingCode=None)` — gets a pairing code for the given phone number, as an alternative to scanning a QR code. `customPairingCode` must be exactly 8 uppercase letters/digits if provided.
-* `.end()` — closes the connection and stops the Node process.
+Creates a WhatsApp connection and configures the Node.js backend.
 
-### `Message`
-
-Automatically built for each incoming message.
-
-**Properties:**
+### Parameters
 
 
-| Property                                | Description                                           |
-| --------------------------------------- | ----------------------------------------------------- |
-| `.text`                                 | The message text                                      |
-| `.chat`                                 | The chat's JID                                        |
-| `.fromBot`                              | `True`if the message was sent by the bot itself       |
-| `.quoted`/`.quotedText`/`.quotedSender` | The quoted message's data, if this message is a reply |
+| Parameter         | Description                              |
+| ----------------- | ---------------------------------------- |
+| `authName`        | Name/path of the authentication folder   |
+| `loggerLevel`     | Pino logger level                        |
+| `browserInfo`     | Browser information used by Baileys      |
+| `syncFullHistory` | Whether to synchronize full chat history |
 
-**Methods:**
+### Methods
+
+* `.start()` — starts the WhatsApp connection.
+* `.on(event, callback)` — registers an event listener.
+* `.requestPairingCode(phoneNumber, customPairingCode=None)` — requests a pairing code instead of scanning a QR code.
+* `.end()` — closes the connection and stops the Node.js process.
+
+`customPairingCode`, when provided, must contain exactly 8 uppercase letters/digits.
+
+---
+
+## `Browser`
+
+Provides predefined browser configurations for Baileys.
+
+Examples:
+
+```python
+Browser.ubuntu("Chrome")
+Browser.macOS("Chrome")
+Browser.windows("Chrome")
+```
+
+You can also provide custom browser information:
+
+```python
+Browser(
+    platform="Ubuntu",
+    browser="Chrome",
+)
+```
+
+The browser information is used as the WhatsApp Web client identity. It does not launch or control an actual web browser (Some times requestPairingCode will not work).
+
+---
+
+## `Message`
+
+A `Message` object is created for each incoming WhatsApp message.
+
+### Properties
+
+
+| Property        | Description                                          |
+| --------------- | ---------------------------------------------------- |
+| `.text`         | The message text, or`None`if the message has no text |
+| `.chat`         | The chat JID                                         |
+| `.key`          | The message key                                      |
+| `.fromMe`       | `True`if the message was sent by the bot             |
+| `.quoted`       | The quoted message data, if this message is a reply  |
+| `.quotedKey`    | The key of the quoted message, if available          |
+| `.quotedId`     | The ID of the quoted message                         |
+| `.quotedSender` | The sender of the quoted message                     |
+| `.quotedFromMe` | Whether the quoted message was sent by the bot       |
+| `.quotedText`   | The text of the quoted message, if available         |
+
+### Methods
 
 * `.reply(msg, chat=None, quoted=None)` — replies to the message.
 * `.send(msg, chat=None)` — sends a new message without a quote.
-* `.delete()` — deletes the message for everyone.
+* `.delete(messageKey=None)` — deletes a message for everyone.
 
-### `QRCode(data, nodeJS, small=True, type="terminal", imgWidth=500)`
+For example, to delete the message being replied to:
 
-* `data`: the raw QR string received from the `"login"` event.
-* `nodeJS`: the `bot.nodeJS` instance, used to send the QR to the Node server for rendering.
-* `small`: `True` for a compact QR (terminal mode only), `False` for a larger one.
-* `type`: `"terminal"` (prints to the terminal) or `"img"` (saves as an image file).
-* `imgWidth`: width in pixels for the generated image, only used when `type="img"`. Must be an `int`.
+```python
+if message.quotedKey:
+    message.delete(message.quotedKey)
+```
 
-**Methods:**
+---
 
-* `.render(imgName="qr.png")` — renders the QR code. For `type="terminal"`, prints it directly to the terminal. For `type="img"`, saves it as an image file with the given name.
+## `QRCode`
 
-### `Connection`
+```python
+QRCode(
+    data,
+    nodeJS,
+    small=True,
+    type="terminal",
+    imgWidth=500
+)
+```
 
-* `.connected` — `True`/`False`
-* `.statusCode` — the disconnect status code, if any
-* `.reason` — the disconnect reason, if any
-* `.isAuthFailure()` — `True` if the reason was a 401 (a new QR code is needed)
+Handles QR code rendering.
+
+### Parameters
+
+
+| Parameter  | Description                                       |
+| ---------- | ------------------------------------------------- |
+| `data`     | The raw QR string received from the`"login"`event |
+| `nodeJS`   | The`bot.nodeJS`instance                           |
+| `small`    | Compact QR mode for terminal output               |
+| `type`     | `"terminal"`or`"img"`                             |
+| `imgWidth` | Image width in pixels when using`"img"`           |
+
+`imgWidth` must be an `int`.
+
+### Methods
+
+* `.render(imgName="qr.png")` — renders the QR code.
+
+For `"terminal"`, the QR code is printed directly to the terminal.
+
+For `"img"`, the QR code is saved as an image file.
+
+---
+
+## `Connection`
+
+Represents the current WhatsApp connection state.
+
+### Properties
+
+* `.connected` — `True` if the connection is open.
+* `.statusCode` — the disconnect status code, if available.
+* `.reason` — the disconnect reason, if available.
+
+### Methods
+
+* `.isAuthFailure()` — returns `True` if the connection closed because of an authentication failure and a new login is required.
+
+---
+
+## Events
+
+WAsock currently provides these events:
+
+
+| Event          | Description                                          |
+| -------------- | ---------------------------------------------------- |
+| `"login"`      | Emitted when a QR code is available                  |
+| `"connection"` | Emitted when the WhatsApp connection opens or closes |
+| `"message"`    | Emitted when a new message is received               |
+
+Example:
+
+```python
+bot.on("message", onMessage)
+```
 
 ---
 
 ## Important Notes
 
-* The `auth/` folder contains sensitive WhatsApp session data — **never commit it to GitHub**.
-* The location of `auth/` is resolved relative to the script's working directory, not the library's location.
+* The `auth/` folder contains sensitive WhatsApp session data. **Never commit it to GitHub.**
+* The location of `auth/` is resolved relative to the program's current working directory, not the library's installation directory.
+* WAsock requires Node.js because Baileys runs inside a Node.js subprocess.
+* The API is still under development and may change before the next stable release.
 
 ---
 
@@ -144,11 +283,18 @@ If you need help, have a question, or encounter an issue, you can contact:
 
 ## License
 
-MIT License — see the [LICENSE](LICENSE) file for details.
+MIT License — see the [LICENSE](https://chatgpt.com/c/LICENSE) file for details.
+
+---
+
+## ChangeLog
+
+See the [ChangeLog](https://chatgpt.com/c/ChangeLog.md) file for the complete change history.
 
 ---
 
 ## Author
 
-Ahmed Mohmmed-AM — Egyptian developer 🇪🇬
+**Ahmed Mohmmed-AM** — Egyptian developer 🇪🇬
+
 GitHub: [@AhmedMohmmed-AM](https://github.com/AhmedMohmmed-AM)

@@ -5,10 +5,11 @@ class Message:
         self.data = message
         self.nodeJS = nodeJS
 
-        self.id = message["key"]["id"]
-        self.chat = message["key"]["remoteJid"]
-        self.sender = message["key"].get("remoteJidAlt")
-        self.fromBot = message["key"]["fromMe"]
+        self.key = message["key"]
+        self.id = self.key["id"]
+        self.chat = self.key["remoteJid"]
+        self.sender = self.key.get("remoteJidAlt")
+        self.fromMe = self.key["fromMe"]
         self.timestamp = message["messageTimestamp"]
         self.name = message.get("pushName")
 
@@ -23,6 +24,8 @@ class Message:
         self.quotedText = None
         self.quotedId = None
         self.quotedSender = None
+        self.quotedFromMe = None
+        self.quotedKey = None
 
         contextInfo = content.get("extendedTextMessage", {}).get("contextInfo")
 
@@ -30,6 +33,13 @@ class Message:
             self.quoted = contextInfo["quotedMessage"]
             self.quotedId = contextInfo.get("stanzaId")
             self.quotedSender = contextInfo.get("participant")
+            self.quotedFromMe = contextInfo.get("fromMe")
+            self.quotedKey = { 
+                "remoteJid": self.chat,
+                "fromMe": self.quotedFromMe,
+                "id": self.quotedId,
+                "participant": self.quotedSender
+            }
 
             self.quotedText = (
                 self.quoted.get("conversation")
@@ -60,13 +70,16 @@ class Message:
             "msg": msg,
         })
 
-    def delete(self):
-        self.nodeJS.send({
-            "action": "deleteMessage",
-            "chat": self.chat,
-            "key": self.getKey()
-        })
-
-    def getKey(self):
-        key = self.data["key"]
-        return key
+    def delete(self, key=None):
+        if key is None:
+            self.nodeJS.send({
+                "action": "deleteMessage",
+                "chat": self.chat,
+                "key": self.key
+            })
+        else:
+            self.nodeJS.send({
+                "action": "deleteMessage",
+                "chat": self.chat,
+                "key": key
+            })
