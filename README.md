@@ -6,7 +6,7 @@
 
 Made by an Egyptian developer 🇪🇬 — Ahmed Mohmmed-AM.
 
-> **Status:**`0.5.2` — still under development. The API may change before a stable release.
+> **Status:**`0.5.3-Beta` — still under development. The API may change before a stable release.
 
 ---
 

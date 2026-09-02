@@ -1,6 +1,6 @@
 ## Changelog
 
-### 0.5.2
+### 0.5.2-0.5.3b0
 
 * Added `syncFullHistory` support to `WhatsAppSocket`
 * Fixed invalid pairing codes caused by default platform values in `requestPairingCode` and `WhatsAppSocket`

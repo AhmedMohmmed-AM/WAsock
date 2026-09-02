@@ -1,9 +1,9 @@
-import atexit, string
+import string
 from .nodejs import NodeJS
 from .browser import Browser
 
 class WhatsAppSocket:
-    def __init__(self, authName="auth", loggerLevel="silent", syncFullHistory=False, browserInfo: "Browser"=Browser.ubuntu("Chrome", "1.14.4")):
+    def __init__(self, authName="auth", loggerLevel="silent", syncFullHistory=False, browserInfo: Browser=Browser.ubuntu("Chrome")):
         if not loggerLevel.lower() in ["debug", "error", "fatal", "info", "silent", "trace", "warn"]:
             raise SyntaxError(f"Unknown logger type {loggerLevel}")
         if not isinstance(authName, str):
